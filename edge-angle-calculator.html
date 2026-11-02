@@ -58,6 +58,9 @@ tr.sel td{font-weight:600;color:var(--accent)}
 code{font-size:.85em}
 .hidden{display:none}
 .section{margin-top:16px}
+body.embed{background:transparent}
+body.embed main{padding:0 0 8px;max-width:none}
+body.embed h1{display:none}
 </style>
 </head>
 <body>
@@ -318,6 +321,13 @@ $("cRc").addEventListener("input",()=>{ $("rc").value=$("cRc").value; render(); 
 $("geom").addEventListener("change",()=>{ const f=$("geom").value==="dps"?0.5:2; ["angA","angB"].forEach(id=>$(id).value=+(parseFloat($(id).value)*f).toFixed(1)); render(); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render);
 render();
+
+// Embedded in Edge Stability Lab (index.html?embed=1): drop the page chrome and report height to the parent.
+if (new URLSearchParams(location.search).has("embed")) {
+  document.body.classList.add("embed");
+  const post = () => parent.postMessage({type:"edge-angle-height", height:document.documentElement.scrollHeight}, "*");
+  new ResizeObserver(post).observe(document.body); post();
+}
 </script>
 </body>
 </html>
