@@ -18,7 +18,7 @@
       <button role="tab" data-tab="runs">Runs</button>
       <button role="tab" data-tab="irons">Irons &amp; steels</button>
       <button role="tab" data-tab="findings">Findings</button>
-      <button role="tab" data-tab="angle">Edge angle</button>
+      <button role="tab" data-tab="angle">Edge retention</button>
       <button role="tab" data-tab="data">Data</button>
     </nav>
   </header>
@@ -142,10 +142,73 @@
       </div>
     </section>
 
-    <!-- EDGE ANGLE CALCULATOR (standalone page, embedded) -->
+    <!-- EDGE RETENTION (js/angle.js) -->
     <section id="tab-angle" class="tab-panel" role="tabpanel" hidden>
-      <iframe id="angle-frame" class="embed-frame" src="edge-angle-calculator.html?embed=1" title="Edge angle and CATRA edge retention calculator"></iframe>
-      <p class="muted small"><a href="edge-angle-calculator.html" target="_blank" rel="noopener">Open the calculator on its own page</a></p>
+      <div class="card">
+        <h2>Design from a toughness requirement</h2>
+        <p class="muted small">Set the minimum toughness a use case needs. For each steel the table gives the hardest heat treat that still meets it, the predicted CATRA edge retention at that hardness, and the most acute angle your test results say that toughness supports. The supported angle comes from the Findings tab, filtered by its use case.</p>
+        <div class="controls">
+          <label>Minimum toughness (ft-lbs)<input type="number" id="ang-tmin" step="0.5" min="0"></label>
+          <label>Supported angle from
+            <select id="ang-src">
+              <option value="data">Your test results (bounds)</option>
+              <option value="fit">Linear fit of your test results</option>
+              <option value="fixed">A fixed angle I enter</option>
+            </select>
+          </label>
+          <label id="ang-src-fixed-wrap"><span>Fallback angle (°)</span><input type="number" id="ang-fixed" step="0.5"></label>
+        </div>
+        <p id="ang-design-summary" class="callout"></p>
+        <div class="table-wrap"><table id="ang-design-table" class="data"></table></div>
+        <p class="muted small">Toughness is Larrin's unnotched subsize Charpy test, read by eye from his toughness vs hardness charts (about ±1 ft-lb). "≥" hardness means the steel beat the requirement even at its hardest tested heat treat. TCC between tested heat treats is interpolated, otherwise shifted from the nearest one by the hardness coefficient. The angle rule assumes more toughness never makes an edge less stable, and it ignores hardness and carbide size, which may also matter.</p>
+      </div>
+
+      <div class="card">
+        <h2>Edge angle calculator</h2>
+        <p class="muted small">Predicts CATRA Total Cardstock Cut (TCC) at any edge angle. It starts from Larrin Thomas's measured results for 48 steels (all at 30° inclusive, 400 grit CBN) and applies an angle model fitted to his 154CM edge-angle data.</p>
+        <div class="controls">
+          <label class="grow">Steel and heat treat (measured at 30°)<select id="ang-steel"></select></label>
+          <label>Your hardness (HRc)<input type="number" id="ang-rc" step="0.1"></label>
+          <label>Angle A (° inclusive)<input type="number" id="ang-a" step="0.5"></label>
+          <label>Angle B (° inclusive)<input type="number" id="ang-b" step="0.5"></label>
+          <label>Angle model<select id="ang-model"></select></label>
+          <label>mm of TCC per HRc<input type="number" id="ang-hcoef" step="0.1"></label>
+        </div>
+        <div id="ang-custom" class="controls" hidden>
+          <span class="muted small">Custom steel: hardness and carbide volume %, run through Larrin's regression at 30°.</span>
+          <label>HRc<input type="number" id="ang-c-rc" step="0.1"></label>
+          <label>CrC<input type="number" id="ang-c-CrC" step="0.5"></label>
+          <label>CrVC<input type="number" id="ang-c-CrVC" step="0.5"></label>
+          <label>MC (VC)<input type="number" id="ang-c-MC" step="0.5"></label>
+          <label>M6C<input type="number" id="ang-c-M6C" step="0.5"></label>
+          <label>MN<input type="number" id="ang-c-MN" step="0.5"></label>
+          <label>CrN<input type="number" id="ang-c-CrN" step="0.5"></label>
+          <label>M3C<input type="number" id="ang-c-M3C" step="0.5"></label>
+        </div>
+        <div id="ang-stats" class="stats"></div>
+        <p id="ang-warn" class="callout warn" hidden></p>
+        <div id="ang-chart" class="chart"></div>
+        <p class="muted small">Solid line: selected model. Dashed: the other models. The angle data covers 20–56°.</p>
+      </div>
+
+      <div class="card">
+        <h2>All steels at angle A</h2>
+        <p class="muted small">Each steel at its tested hardness. The last column is the angle at which that steel would match your selection at angle A. Click a header to sort.</p>
+        <div class="table-wrap tall"><table id="ang-table" class="data"></table></div>
+      </div>
+
+      <div class="card">
+        <h2>How the angle models were fitted</h2>
+        <div id="ang-fit" class="chart"></div>
+        <div id="ang-fit-legend" class="legend"></div>
+        <ul class="small">
+          <li>The points are read from Larrin's chart of 154CM and CPM-154 knives sharpened from 20° to 56° inclusive, so the steel is held constant.</li>
+          <li>The exponential fit is TCC ∝ e<sup>−0.0603 × angle</sup>: each degree changes edge retention by about 6%, so a high-wear steel gains or loses more mm per degree than a low-wear one.</li>
+          <li>Larrin's regression uses −17.8 mm per degree. The fitted curve is steeper near 30° (about 29 mm per degree) and flatter at wide angles.</li>
+          <li>Hardness is applied as an offset to the 30° value, then scaled by the angle model.</li>
+          <li>CATRA measures slicing wear in silica-loaded card on a symmetric edge. Planing is a push cut on a single bevel, so treat these as relative wear numbers. A plane iron's honed angle is its inclusive angle. The model covers abrasive wear only, not chipping or rolling.</li>
+        </ul>
+      </div>
     </section>
 
     <!-- DATA -->
@@ -168,6 +231,7 @@
 
   <script src="js/seed.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/angle.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
