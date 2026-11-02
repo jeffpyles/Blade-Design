@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge Angle Calculator</title>
+<style>
+:root{
+  --bg:#f7f6f3; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a66; --line:#e2e0da;
+  --accent:#b4531f; --accent2:#2f6f9f; --accent3:#5a8a3a; --accent4:#8a5aa8;
+  --band:rgba(47,111,159,.08); --warn-bg:#fff4e5; --warn-ink:#7a4a00;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614; --panel:#201f1d; --ink:#ecebe7; --muted:#a3a19b; --line:#34322e;
+    --accent:#e8834a; --accent2:#6fa8d6; --accent3:#8cc36a; --accent4:#b993d6;
+    --band:rgba(111,168,214,.10); --warn-bg:#3a2c14; --warn-ink:#f0c886;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614; --panel:#201f1d; --ink:#ecebe7; --muted:#a3a19b; --line:#34322e;
+  --accent:#e8834a; --accent2:#6fa8d6; --accent3:#8cc36a; --accent4:#b993d6;
+  --band:rgba(111,168,214,.10); --warn-bg:#3a2c14; --warn-ink:#f0c886;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.6rem;margin:0 0 4px}
+h2{font-size:1.1rem;margin:0 0 12px}
+p.lede{color:var(--muted);margin:0 0 20px;max-width:75ch}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+select,input{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.stat .k{font-size:.8rem;color:var(--muted)}
+.stat .v{font-size:1.45rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .s{font-size:.8rem;color:var(--muted)}
+.pos{color:var(--accent3)} .neg{color:var(--accent)}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.82rem;color:var(--muted);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;background:var(--c)}
+.legend span.dash::before{background:repeating-linear-gradient(90deg,var(--c) 0 5px,transparent 5px 8px)}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:8px 12px;font-size:.88rem;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line)}
+th:nth-child(-n+2),td:nth-child(-n+2){text-align:left}
+th{color:var(--muted);font-weight:500;cursor:pointer;user-select:none}
+tr.sel td{font-weight:600;color:var(--accent)}
+.tablewrap{overflow-x:auto;max-height:520px;overflow-y:auto}
+.notes{color:var(--muted);font-size:.9rem}
+.notes li{margin-bottom:6px}
+code{font-size:.85em}
+.hidden{display:none}
+.section{margin-top:16px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Edge angle and CATRA edge retention</h1>
+  <p class="lede">Predicts CATRA Total Cardstock Cut (TCC) at any edge angle. It starts from Larrin Thomas's measured results for 48 steels (all sharpened to 30° inclusive, 400 grit CBN) and applies an angle model fitted to his 154CM edge-angle data. Use it to see how much an angle change is worth compared with a change of steel or hardness.</p>
+
+  <div class="grid">
+    <section class="card" aria-label="Inputs">
+      <h2>Inputs</h2>
+      <label for="steel">Steel and heat treat (measured at 30°)</label>
+      <select id="steel"></select>
+
+      <div id="customBox" class="hidden">
+        <label>Custom steel: hardness and carbide volume % (Larrin's regression at 30°)</label>
+        <div class="row4">
+          <div><label for="cRc">HRc</label><input id="cRc" type="number" step="0.1" value="61"></div>
+          <div><label for="cCrC">CrC</label><input id="cCrC" type="number" step="0.5" value="6"></div>
+          <div><label for="cCrVC">CrVC</label><input id="cCrVC" type="number" step="0.5" value="0"></div>
+          <div><label for="cMC">MC (VC)</label><input id="cMC" type="number" step="0.5" value="0"></div>
+          <div><label for="cM6C">M6C</label><input id="cM6C" type="number" step="0.5" value="0"></div>
+          <div><label for="cMN">MN</label><input id="cMN" type="number" step="0.5" value="0"></div>
+          <div><label for="cCrN">CrN</label><input id="cCrN" type="number" step="0.5" value="0"></div>
+          <div><label for="cM3C">M3C</label><input id="cM3C" type="number" step="0.5" value="0"></div>
+        </div>
+      </div>
+
+      <label for="rc">Your hardness (HRc)</label>
+      <input id="rc" type="number" step="0.1">
+
+      <label for="geom">How you enter angles</label>
+      <select id="geom">
+        <option value="incl">Inclusive angle (plane iron or chisel bevel; knife total)</option>
+        <option value="dps">Degrees per side (knife, double bevel)</option>
+      </select>
+
+      <div class="row2">
+        <div><label for="angA">Angle A (°)</label><input id="angA" type="number" step="0.5" value="30"></div>
+        <div><label for="angB">Angle B (°)</label><input id="angB" type="number" step="0.5" value="25"></div>
+      </div>
+
+      <label for="model">Angle model</label>
+      <select id="model">
+        <option value="exp">Exponential fit, about 6% per degree (best fit)</option>
+        <option value="pow">Power-law fit</option>
+        <option value="log">Logarithmic fit</option>
+        <option value="lin">Larrin's linear term (−17.8 mm per degree)</option>
+      </select>
+
+      <label for="hcoef">Hardness coefficient (mm of TCC per HRc)</label>
+      <input id="hcoef" type="number" step="0.1" value="15.8">
+
+      <div id="warn" class="warn hidden"></div>
+    </section>
+
+    <section class="card" aria-label="Results">
+      <h2>Prediction</h2>
+      <div class="stats">
+        <div class="stat"><div class="k">TCC at angle A</div><div class="v" id="tA">–</div><div class="s" id="tAs"></div></div>
+        <div class="stat"><div class="k">TCC at angle B</div><div class="v" id="tB">–</div><div class="s" id="tBs"></div></div>
+        <div class="stat"><div class="k">Change from A to B</div><div class="v" id="dAB">–</div><div class="s" id="dABs"></div></div>
+        <div class="stat"><div class="k">1° at angle A is worth</div><div class="v" id="per">–</div><div class="s" id="pers"></div></div>
+      </div>
+      <svg id="chart" viewBox="0 0 640 340" role="img" aria-label="Predicted TCC against inclusive edge angle"></svg>
+      <div class="legend">
+        <span style="--c:var(--accent)">Selected model</span>
+        <span class="dash" style="--c:var(--muted)">Other models</span>
+        <span style="--c:var(--band)">Range of the angle data (20–56°)</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="card section" aria-label="Comparison">
+    <h2>All steels at angle A</h2>
+    <p class="notes" style="margin-top:-6px">Each steel at its tested hardness and angle A. The last column gives the angle at which that steel would match your selection at angle A. Click a column header to sort.</p>
+    <div class="tablewrap"><table id="tbl"></table></div>
+  </section>
+
+  <section class="card section" aria-label="Fit check">
+    <h2>How the angle models were fitted</h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div>
+        <svg id="fit" viewBox="0 0 480 300" role="img" aria-label="154CM edge angle data with fitted curves"></svg>
+        <div class="legend">
+          <span style="--c:var(--accent)">Exponential (R² 0.95)</span>
+          <span style="--c:var(--accent2)">Power (R² 0.93)</span>
+          <span style="--c:var(--accent4)">Log (R² 0.91)</span>
+          <span style="--c:var(--accent3)">Linear (R² 0.83)</span>
+        </div>
+      </div>
+      <ul class="notes">
+        <li>The points are read from Larrin's chart of 154CM and CPM-154 knives sharpened to angles from 20° to 56° inclusive. A single steel family isolates the effect of angle.</li>
+        <li>The exponential fit is <code>TCC ∝ e<sup>−0.0603·angle</sup></code>. Each degree changes edge retention by about 6%, so a high-wear steel gains or loses more mm per degree than a low-wear one. The trendlines in Larrin's large multi-steel dataset show the same pattern, which a single linear coefficient can't produce.</li>
+        <li>Larrin's regression uses −17.8 mm per degree. The fitted curve is steeper near 30° (about 29 mm per degree) and flatter at wide angles. His fit was made across many steels and knives at once, which probably dilutes the angle effect.</li>
+        <li>Hardness is applied as an offset to the 30° value (15.8 mm per HRc from his regression), then scaled by the angle model.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card section" aria-label="Caveats">
+    <h2>Caveats for plane irons</h2>
+    <ul class="notes">
+      <li>CATRA measures slicing wear in silica-loaded card on a symmetric knife edge. Planing is a push cut with a single bevel, so treat these numbers as relative wear resistance, not shavings per sharpening.</li>
+      <li>A plane iron's honed angle is the inclusive angle, so enter a 25° bevel as 25°. Angles below 20° are outside the data and extrapolated.</li>
+      <li>The model only covers abrasive wear. It says nothing about chipping or edge rolling, which is what limits low angles in practice. Pair it with your edge-stability results, using toughness as the constraint.</li>
+      <li>Each of the 48 steels was tested three times and averaged, but repeat runs still scatter, so differences of a few percent between steels aren't meaningful.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+// Measured data: Larrin Thomas, "Testing the Edge Retention of 48 Knife Steels", Knife Steel Nerds (2020).
+// [steel, heat treat label, HRc, TCC mm] — all at 30° inclusive, 400 grit CBN.
+const STEELS = [
+["1.2442","1475°F / 300°F",62.5,330],["1.2519","1525°F / 400°F",62.2,320],["1.2562","1475°F / 400°F",65.4,348],
+["1095","1475°F / 400°F",61.8,316],["8670","1525°F / 400°F",59.2,271],["52100","1525°F / 350°F",60.5,328],
+["10V","1800°F / 500°F",59.9,718],["10V","1975°F / 400°F",65.9,797],["14C28N","2000°F / 375°F",62,414],
+["15V","1900°F / 500°F",63,879],["204P","2050°F / 400°F",61.5,620],["26C3","1475°F / 350°F",63,304],
+["3V","1950°F / 300°F",60.1,463],["440C","1850°F / 350°F",56,405],["440C","1850°F / 300°F",57,425],
+["440C","1950°F / 300°F",62.8,455],["4V","1900°F / 400°F",63,538],["4V","1950°F / 1000°F",60.7,526],
+["A2","1775°F / 400°F",61.5,339],["A8 mod","1900°F / 400°F",60.6,351],["AEB-L","1950°F / 400°F",61.1,360],
+["AEB-L","1975°F / 300°F",64.6,444],["AEB-L","1975°F / 350°F",62.7,387],["BD1N","1900°F / 400°F",60.6,404],
+["Blue Super","1475°F / 400°F",65.1,338],["Caldie","1850°F / 500°F",60.6,314],["CD1","1925°F / 400°F",60.9,353],
+["CPM CruWear","1975°F / 400°F",62.1,528],["CPM-154","1950°F / 400°F",61,492],["CPM-M4","2000°F / 1000°F",61.1,570],
+["CruForgeV","1500°F / 400°F",61.1,320],["D2","1850°F / 400°F, no cryo",60.5,486],["D2","1850°F / 500°F, 36 h cryo",59.2,499],
+["Elmax","1975°F / 300°F",61.3,559],["K390","1850°F / 500°F",62.8,719],["LC200N","1900°F / 300°F",59.7,380],
+["M2","2100°F / 1000°F",63.8,487],["Niolox","1975°F / 400°F",60.4,429],["Nitro-V","1900°F / 400°F",60.4,362],
+["O1","1475°F / 400°F",60.9,283],["Rex 121","2050°F / 300°F",71.4,1009],["Rex 86/Z-Max","2100°F / 300°F",69.8,909],
+["S110V","2050°F / 400°F",61.9,738],["S125V","2050°F / 400°F",62.3,828],["S30V","1950°F / 500°F",59.8,568],
+["S30V","2000°F / 400°F",61.9,596],["S30V","2050°F / 300°F",65.1,634],["S35VN","2000°F / 400°F",61.2,520],
+["S45VN","2000°F / 400°F",61.5,554],["S60V","2050°F / 400°F",61.7,658],["S90V","2050°F / 400°F",61.6,779],
+["SG2","2000°F / 400°F",61.2,522],["Vanadis 8","1850°F / 500°F",60.7,677],["Vanax","1975°F / 300°F",61,546],
+["VG10","1975°F / 400°F",61.6,479],["V-Toku 2","1475°F / 400°F",63.6,314],["ZDP-189","1850°F / 400°F",65.1,718]
+];
+// 154CM / CPM-154 angle data, read from Larrin's edge-angle-vs-TCC chart (inclusive angle, TCC mm).
+const ANGLE_DATA = [[20,925],[20,1006],[27,555],[27,482],[27,580],[27,610],[27,640],[27,670],[32,370],[32,447],[33,353],[33,353],
+[34,330],[34,360],[34,400],[34,430],[34,460],[50,200],[50,110],[50,130],[50,150],[50,180],[56,99]];
+
+const REF = 30;
+// Fitted to ANGLE_DATA by least squares (see the fit section). Each returns TCC(θ) for a steel whose 30° value is t30.
+const MODELS = {
+  exp:{name:"Exponential", fn:(t30,th)=>t30*Math.exp(-0.0603*(th-REF)), color:"--accent"},
+  pow:{name:"Power", fn:(t30,th)=>t30*Math.pow(th/REF,-2.158), color:"--accent2"},
+  log:{name:"Log", fn:(t30,th)=>Math.max(0,t30*(3193.2-786.1*Math.log(th))/(3193.2-786.1*Math.log(REF))), color:"--accent4"},
+  lin:{name:"Linear", fn:(t30,th)=>Math.max(0,t30-17.8*(th-REF)), color:"--accent3"}
+};
+// Raw curves fitted to the 154CM data, for the fit-check chart.
+const RAW = {
+  exp:th=>2980.5*Math.exp(-0.0603*th), pow:th=>708924*Math.pow(th,-2.158),
+  log:th=>3193.2-786.1*Math.log(th), lin:th=>1161.5-20.88*th
+};
+
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (x,d=0) => Number.isFinite(x) ? x.toFixed(d) : "–";
+
+// Populate steel list; default to AEB-L at 64.6 HRc (closest to Jeff's plane iron).
+const sel = $("steel");
+STEELS.forEach((s,i)=>{const o=document.createElement("option");o.value=i;o.textContent=`${s[0]}  (${s[1]}, ${s[2]} HRc, ${s[3]} mm)`;sel.appendChild(o);});
+const oc=document.createElement("option");oc.value="custom";oc.textContent="Custom: enter carbide volumes";sel.appendChild(oc);
+sel.value = STEELS.findIndex(s=>s[0]==="AEB-L"&&s[2]===64.6);
+$("rc").value = 64.6;
+
+function inclusive(v){ return $("geom").value==="dps" ? v*2 : v; }
+
+function base(){ // returns {name, rc0, t30} for the selection at its own tested hardness
+  if (sel.value==="custom"){
+    const g=id=>parseFloat($(id).value)||0, rc0=g("cRc");
+    const t30=-157+15.8*rc0-17.8*REF+11.2*g("cCrC")+14.6*g("cCrVC")+26.2*g("cMC")+9.5*g("cM6C")+20.9*g("cMN")+19.4*g("cCrN")+5*g("cM3C");
+    return {name:"Custom", rc0, t30};
+  }
+  const s=STEELS[+sel.value]; return {name:s[0], rc0:s[2], t30:s[3]};
+}
+function t30At(b, rc){ return b.t30 + parseFloat($("hcoef").value||0)*(rc-b.rc0); }
+function solveAngle(model, t30, target){ // angle where model(t30, θ) = target, by bisection on 5–80°
+  let lo=5, hi=80, f=th=>model.fn(t30,th)-target;
+  if (f(lo)<0) return NaN; if (f(hi)>0) return NaN;
+  for(let i=0;i<60;i++){const m=(lo+hi)/2; f(m)>0?lo=m:hi=m;} return (lo+hi)/2;
+}
+
+let sortKey="tA", sortDir=-1;
+
+function render(){
+  $("customBox").classList.toggle("hidden", sel.value!=="custom");
+  const b=base(), rc=parseFloat($("rc").value), model=MODELS[$("model").value];
+  const A=inclusive(parseFloat($("angA").value)), B=inclusive(parseFloat($("angB").value));
+  const t30=t30At(b,rc), tA=model.fn(t30,A), tB=model.fn(t30,B);
+  $("tA").textContent=fmt(tA)+" mm"; $("tAs").textContent=`${fmt(A,1)}° inclusive`;
+  $("tB").textContent=fmt(tB)+" mm"; $("tBs").textContent=`${fmt(B,1)}° inclusive`;
+  const pct=(tB/tA-1)*100;
+  $("dAB").textContent=(pct>=0?"+":"")+fmt(pct)+"%"; $("dAB").className="v "+(pct>=0?"pos":"neg");
+  $("dABs").textContent=`${tB-tA>=0?"+":""}${fmt(tB-tA)} mm`;
+  const slope=(model.fn(t30,A-0.5)-model.fn(t30,A+0.5));
+  const hc=parseFloat($("hcoef").value)||1;
+  $("per").textContent=fmt(slope,1)+" mm";
+  $("pers").textContent=`about ${fmt(slope/hc,1)} HRc, or ${fmt(slope/tA*100,1)}% of TCC`;
+
+  const warn=[];
+  if (Math.min(A,B)<20) warn.push("An angle below 20° is outside the fitted data, so the result is an extrapolation.");
+  if (Math.max(A,B)>56) warn.push("An angle above 56° is outside the fitted data.");
+  if (Math.abs(rc-b.rc0)>3) warn.push(`Your hardness is ${fmt(Math.abs(rc-b.rc0),1)} HRc away from the tested ${b.rc0}, so the hardness adjustment is a rough linear estimate.`);
+  $("warn").innerHTML=warn.join("<br>"); $("warn").classList.toggle("hidden",!warn.length);
+
+  drawChart(t30,A,B); drawTable(tA,A); drawFit();
+}
+
+function axes(svg,W,H,m,xr,yr,xt,yt,xl,yl){
+  const X=v=>m.l+(v-xr[0])/(xr[1]-xr[0])*(W-m.l-m.r), Y=v=>H-m.b-(v-yr[0])/(yr[1]-yr[0])*(H-m.t-m.b);
+  let s="";
+  yt.forEach(v=>{s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css("--line")}"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;});
+  xt.forEach(v=>{s+=`<text x="${X(v)}" y="${H-m.b+16}" text-anchor="middle">${v}</text>`;});
+  s+=`<text x="${(m.l+W-m.r)/2}" y="${H-4}" text-anchor="middle">${xl}</text>`;
+  s+=`<text transform="translate(12,${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">${yl}</text>`;
+  return {X,Y,s};
+}
+function path(fn,X,Y,x0,x1,ymax){let d="";for(let x=x0;x<=x1+1e-9;x+=0.5){const y=Math.min(fn(x),ymax);d+=(d?"L":"M")+X(x).toFixed(1)+","+Y(Math.max(0,y)).toFixed(1);}return d;}
+
+function drawChart(t30,A,B){
+  const W=640,H=340,m={l:52,r:16,t:14,b:40}, cur=$("model").value;
+  const ymax=Math.ceil(Math.max(MODELS[cur].fn(t30,15), t30*1.2)/200)*200;
+  const yt=[];for(let v=0;v<=ymax;v+=ymax>1600?400:200)yt.push(v);
+  const g=axes($("chart"),W,H,m,[15,60],[0,ymax],[15,20,25,30,35,40,45,50,55,60],yt,"Inclusive edge angle (°)","Predicted TCC (mm)");
+  let s=`<rect x="${g.X(20)}" y="${m.t}" width="${g.X(56)-g.X(20)}" height="${H-m.t-m.b}" fill="${css("--band")}"/>`+g.s;
+  for(const k in MODELS){ if(k===cur) continue;
+    s+=`<path d="${path(th=>MODELS[k].fn(t30,th),g.X,g.Y,15,60,ymax)}" fill="none" stroke="${css("--muted")}" stroke-width="1.2" stroke-dasharray="5 3"/>`; }
+  s+=`<path d="${path(th=>MODELS[cur].fn(t30,th),g.X,g.Y,15,60,ymax)}" fill="none" stroke="${css("--accent")}" stroke-width="2.5"/>`;
+  [[A,"A"],[B,"B"]].forEach(([th,l])=>{ if(th<15||th>60) return; const y=MODELS[cur].fn(t30,th);
+    s+=`<line x1="${g.X(th)}" x2="${g.X(th)}" y1="${m.t}" y2="${H-m.b}" stroke="${css("--ink")}" stroke-opacity=".35"/>`+
+       `<circle cx="${g.X(th)}" cy="${g.Y(Math.min(y,ymax))}" r="5" fill="${css("--accent")}" stroke="${css("--panel")}" stroke-width="2"/>`+
+       `<text x="${g.X(th)+6}" y="${m.t+12}" style="fill:${css("--ink")}">${l}</text>`; });
+  $("chart").innerHTML=s;
+}
+
+function drawTable(tSel,A){
+  const model=MODELS[$("model").value], selIdx=sel.value;
+  const rows=STEELS.map((s,i)=>({i, name:s[0], ht:s[1], rc:s[2], t30:s[3], tA:model.fn(s[3],A), eq:solveAngle(model,s[3],tSel)}));
+  rows.sort((a,b)=>{const x=a[sortKey],y=b[sortKey]; return (typeof x==="string"?x.localeCompare(y):((Number.isFinite(x)?x:-1e9)-(Number.isFinite(y)?y:-1e9)))*sortDir;});
+  const h=[["name","Steel"],["ht","Heat treat"],["rc","HRc"],["t30","TCC at 30° (measured)"],["tA",`TCC at ${fmt(A,1)}°`],["eq","Angle to match selection"]];
+  let s="<thead><tr>"+h.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir<0?" ▼":" ▲"):""}</th>`).join("")+"</tr></thead><tbody>";
+  rows.forEach(r=>{ s+=`<tr class="${String(r.i)===selIdx?"sel":""}"><td>${r.name}</td><td>${r.ht}</td><td>${r.rc}</td><td>${r.t30}</td><td>${fmt(r.tA)}</td><td>${Number.isFinite(r.eq)?fmt(r.eq,1)+"°":"out of range"}</td></tr>`; });
+  $("tbl").innerHTML=s+"</tbody>";
+  $("tbl").querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k; sortDir = sortKey===k?-sortDir:(k==="name"||k==="ht"?1:-1); sortKey=k; render();});
+}
+
+function drawFit(){
+  const W=480,H=300,m={l:48,r:12,t:12,b:40};
+  const g=axes($("fit"),W,H,m,[15,60],[0,1200],[15,20,30,40,50,60],[0,200,400,600,800,1000,1200],"Inclusive edge angle (°)","TCC (mm)");
+  let s=g.s;
+  const col={exp:"--accent",pow:"--accent2",log:"--accent4",lin:"--accent3"};
+  for(const k in RAW) s+=`<path d="${path(RAW[k],g.X,g.Y,18,60,1200)}" fill="none" stroke="${css(col[k])}" stroke-width="${k==="exp"?2.5:1.5}"/>`;
+  ANGLE_DATA.forEach(([x,y])=>{s+=`<circle cx="${g.X(x)}" cy="${g.Y(y)}" r="3.5" fill="${css("--ink")}" fill-opacity=".55"/>`;});
+  $("fit").innerHTML=s;
+}
+
+sel.addEventListener("change",()=>{ if(sel.value!=="custom") $("rc").value=STEELS[+sel.value][2]; else $("rc").value=$("cRc").value; render(); });
+document.querySelectorAll("input,select").forEach(e=>{ if(e!==sel) e.addEventListener("input",render); });
+$("cRc").addEventListener("input",()=>{ $("rc").value=$("cRc").value; render(); });
+$("geom").addEventListener("change",()=>{ const f=$("geom").value==="dps"?0.5:2; ["angA","angB"].forEach(id=>$(id).value=+(parseFloat($(id).value)*f).toFixed(1)); render(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render);
+render();
+</script>
+</body>
+</html>
