@@ -88,6 +88,11 @@
     else if (ui.tab === "data") renderData();
   }
   window.addEventListener("resize", debounce(function () { if (ui.tab === "charts" || ui.tab === "findings") render(); }, 150));
+  // The edge angle calculator is a standalone page shown in an iframe; it reports its height so the frame fits without scrolling.
+  window.addEventListener("message", function (e) {
+    var f = document.getElementById("angle-frame");
+    if (f && e.source === f.contentWindow && e.data && e.data.type === "edge-angle-height") f.style.height = Math.ceil(e.data.height) + "px";
+  });
   function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
 
   // ---------- charts tab ----------

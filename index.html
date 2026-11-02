@@ -18,6 +18,7 @@
       <button role="tab" data-tab="runs">Runs</button>
       <button role="tab" data-tab="irons">Irons &amp; steels</button>
       <button role="tab" data-tab="findings">Findings</button>
+      <button role="tab" data-tab="angle">Edge angle</button>
       <button role="tab" data-tab="data">Data</button>
     </nav>
   </header>
@@ -139,6 +140,12 @@
         <h3>Notes</h3>
         <textarea id="findings-notes" rows="6" placeholder="Running notes on findings, hypotheses, next tests…"></textarea>
       </div>
+    </section>
+
+    <!-- EDGE ANGLE CALCULATOR (standalone page, embedded) -->
+    <section id="tab-angle" class="tab-panel" role="tabpanel" hidden>
+      <iframe id="angle-frame" class="embed-frame" src="edge-angle-calculator.html?embed=1" title="Edge angle and CATRA edge retention calculator"></iframe>
+      <p class="muted small"><a href="edge-angle-calculator.html" target="_blank" rel="noopener">Open the calculator on its own page</a></p>
     </section>
 
     <!-- DATA -->
