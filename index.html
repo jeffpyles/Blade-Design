@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edge Stability Lab</title>
+  <meta name="description" content="Log plane iron edge-stability test runs, chart sharpness vs distance planed, and map toughness to minimum safe edge angle.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Edge Stability Lab</h1>
+      <p class="sub">Plane iron sharpness vs distance planed, and the toughness to minimum angle map</p>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="charts" aria-selected="true">Charts</button>
+      <button role="tab" data-tab="runs">Runs</button>
+      <button role="tab" data-tab="irons">Irons &amp; steels</button>
+      <button role="tab" data-tab="findings">Findings</button>
+      <button role="tab" data-tab="data">Data</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- CHARTS -->
+    <section id="tab-charts" class="tab-panel" role="tabpanel">
+      <div class="controls">
+        <label>X axis
+          <select id="ctl-x">
+            <option value="strokes">Cumulative strokes</option>
+            <option value="feet">Linear feet planed</option>
+          </select>
+        </label>
+        <label>Y axis
+          <select id="ctl-y">
+            <option value="grams">Force to cut (g)</option>
+            <option value="pct">Change from start (%)</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="ctl-range" checked> Show min–max of readings</label>
+        <label class="check"><input type="checkbox" id="ctl-ref" checked> Show references</label>
+      </div>
+      <div id="run-picker" class="chips" aria-label="Runs to chart"></div>
+      <div class="card">
+        <h2 class="chart-title">Sharpness vs load <span class="muted">(lower is sharper)</span></h2>
+        <div id="chart-sharpness" class="chart"></div>
+        <p id="chart-note" class="muted small"></p>
+      </div>
+      <div class="card">
+        <h2>Run summary</h2>
+        <div class="table-wrap"><table id="summary-table" class="data"></table></div>
+        <p class="muted small">Plateau is the median of checkpoint means from the third checkpoint on (after the initial drop). Noise is the mean coefficient of variation within each triplet.</p>
+      </div>
+    </section>
+
+    <!-- RUNS -->
+    <section id="tab-runs" class="tab-panel" role="tabpanel" hidden>
+      <div class="split">
+        <aside class="card run-list">
+          <div class="row-between">
+            <h2>Runs</h2>
+            <button id="btn-new-run" class="primary">New run</button>
+          </div>
+          <ul id="run-list"></ul>
+        </aside>
+        <div class="card" id="run-editor"></div>
+      </div>
+    </section>
+
+    <!-- IRONS -->
+    <section id="tab-irons" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <div class="row-between"><h2>Irons</h2><button id="btn-new-iron" class="primary">Add iron</button></div>
+        <p class="muted small">An iron is one physical blade. Runs point at an iron; the iron carries steel, hardness and Charpy estimate.</p>
+        <div class="table-wrap"><table id="iron-table" class="data editable"></table></div>
+      </div>
+      <div class="card">
+        <div class="row-between"><h2>Reference steels (Pareto chart)</h2><button id="btn-new-steel" class="primary">Add steel</button></div>
+        <p class="muted small">Hardness and Charpy toughness pairs for the hardness–toughness frontier. Record where each value came from.</p>
+        <div class="table-wrap"><table id="steel-table" class="data editable"></table></div>
+      </div>
+      <div class="card">
+        <div class="row-between"><h2>Sharpness references</h2><button id="btn-new-ref" class="primary">Add reference</button></div>
+        <div class="table-wrap"><table id="ref-table" class="data editable"></table></div>
+      </div>
+    </section>
+
+    <!-- FINDINGS -->
+    <section id="tab-findings" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <h2>Toughness threshold map</h2>
+        <p class="muted small">Each row is a steel at a hardness; each column is an edge angle (microbevel if set, else bevel). A cell takes the outcome of the runs at that angle. The minimum safe angle is the lowest angle with a stable result.</p>
+        <label>Use case
+          <select id="ctl-usecase"></select>
+        </label>
+        <div class="table-wrap"><table id="matrix" class="matrix"></table></div>
+        <div class="legend" id="matrix-legend"></div>
+      </div>
+      <div class="card">
+        <h2>Charpy toughness vs minimum safe angle</h2>
+        <p class="muted small">The relationship nobody has published. Filled points are the lowest stable angle found; hollow points are angles that failed. Needs a Charpy estimate on the iron.</p>
+        <div id="chart-threshold" class="chart"></div>
+      </div>
+      <div class="card">
+        <h2>Pareto frontier: hardness vs toughness</h2>
+        <div class="controls">
+          <label>Toughness required (ft-lbs)
+            <input type="number" id="ctl-tmin" step="0.5" min="0" value="">
+          </label>
+          <span id="pareto-pick" class="muted"></span>
+        </div>
+        <div id="chart-pareto" class="chart"></div>
+        <p class="muted small">Frontier points are steels no other steel beats on both hardness and toughness. With toughness treated as a constraint, pick the hardest steel at or above the required toughness.</p>
+      </div>
+      <div class="card prose">
+        <h2>The argument</h2>
+        <h3>Toughness is a constraint, not an objective</h3>
+        <p>Steel choice is a trade between hardness (edge retention) and toughness (chip resistance). For a given edge geometry and use, there is a minimum toughness that prevents chipping. Above that, extra toughness buys nothing, so the right steel is the one that reaches the highest hardness at that toughness. Only a handful of alloys on the frontier make sense for most uses.</p>
+        <h3>The gap</h3>
+        <p>No published data maps a toughness value (for example Charpy ft-lbs) to a minimum safe edge angle for a given use. Charpy is a bulk test, while edge chipping is driven by crack initiation and low-cycle fatigue at the apex, so the link is unproven. This tool exists to build that map.</p>
+        <h3>Why hand planes</h3>
+        <p>In a bevel-down plane the bed sets the cutting angle. The bevel angle changes only edge strength, not cutting geometry, so edge angle is a clean independent variable.</p>
+        <h3>What the runs show so far</h3>
+        <ul id="obs-list"></ul>
+        <h3>Test plan</h3>
+        <ol>
+          <li>Vary edge angle with microbevels at 15, 17.5, 20, 22.5, 25, 27.5 and 30° per steel and hardness. Find the lowest angle that plateaus without visible chips.</li>
+          <li>Inspect the edge with a USB microscope (100–200x) at each checkpoint. Log failure mode (rolling, chipping, wear) with chip count and size.</li>
+          <li>Measure load in linear feet planed rather than strokes. Fix shaving thickness. Define use cases by wood (for example clear pine vs hard maple with knots or reversing grain).</li>
+          <li>Alternate irons on the same board to control for board-to-board variation.</li>
+          <li>Standardize the sharpness test: 3 marked spots on the edge, consistent media and tension, and record the media for each reading.</li>
+        </ol>
+        <h3>Sources</h3>
+        <ul>
+          <li>Larrin Thomas, <a href="https://knifesteelnerds.com/" target="_blank" rel="noopener">Knife Steel Nerds</a>: "Tests of Knife Edge Toughness", "How Chipping of Edges Happens", and the edge stability articles; the book <em>Knife Engineering</em>.</li>
+          <li>Roman Landes, <em>Messerklingen und Stahl</em> (2006), the "edge stability" concept.</li>
+        </ul>
+        <h3>Notes</h3>
+        <textarea id="findings-notes" rows="6" placeholder="Running notes on findings, hypotheses, next tests…"></textarea>
+      </div>
+    </section>
+
+    <!-- DATA -->
+    <section id="tab-data" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <h2>Save and share data</h2>
+        <p>Everything is stored in this browser. Export a JSON file to back it up, move it to another device, or commit it to the repo as <code>data/</code>.</p>
+        <div class="btn-row">
+          <button id="btn-export" class="primary">Export JSON</button>
+          <label class="btn">Import JSON<input type="file" id="file-import" accept="application/json,.json" hidden></label>
+          <button id="btn-export-csv">Export readings CSV</button>
+          <button id="btn-reset" class="danger">Reset to seed data</button>
+        </div>
+        <p id="storage-status" class="muted small"></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+
+  <script src="js/seed.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
