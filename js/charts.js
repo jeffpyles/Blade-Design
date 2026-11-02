@@ -146,7 +146,7 @@
     var xmin = Math.min.apply(null, xv), xmax = Math.max.apply(null, xv), ymin = Math.min.apply(null, yv), ymax = Math.max.apply(null, yv);
     var xp = (xmax - xmin) * 0.1 || 2, yp = (ymax - ymin) * 0.1 || 2;
     var xs = niceTicks(Math.max(0, xmin - xp), xmax + xp, Math.max(3, Math.floor(f.iw / 90)));
-    var ys = niceTicks(ymin - yp, ymax + yp, 6);
+    var ys = niceTicks(opts.yZero ? Math.max(0, ymin - yp) : ymin - yp, ymax + yp, 6);
     var s = axes(f, xs, ys, opts.xLabel, opts.yLabel);
 
     (opts.vlines || []).forEach(function (v) {
